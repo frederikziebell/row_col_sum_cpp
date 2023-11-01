@@ -1,0 +1,86 @@
+```{r}
+library("Rcpp")
+library("bench")
+ 
+cppFunction("
+  NumericVector colSums_cpp(NumericMatrix m){
+ 
+    int nr = m.nrow();
+    int nc = m.ncol();
+    // col sums
+    NumericVector cs(nc);
+ 
+    // i: col index of m, j: row index of m
+    // We traverse x sequentially from the first
+    // to the last element, which is relatively fast.
+    // Thereby, we can treat the matrix m as a vector
+    // resulting from concatenating its columns.
+    for(int i = 0; i < nc; i++){
+      for(int j = 0; j < nr; j++){
+        cs[i] += m[i*nr + j]; 
+      }   
+    }
+ 
+    return cs;
+ 
+  }
+")
+ 
+cppFunction("
+  NumericVector rowSums_fast_cpp(NumericMatrix m){
+ 
+    int nr = m.nrow();
+    int nc = m.ncol();
+    // row sums
+    NumericVector rs(nr);
+ 
+    // i: col index of m, j: row index of m
+    // we traverse x in the same way as in colSums_cpp,
+    // but sum up the corresponding element
+    for(int i = 0; i < nc; i++){
+      for(int j = 0; j < nr; j++){
+        rs[j] += m[i*nr + j]; 
+      }   
+    }
+ 
+    return rs;
+ 
+  }
+")
+ 
+cppFunction("
+  NumericVector rowSums_slow_cpp(NumericMatrix m){
+ 
+    int nr = m.nrow();
+    int nc = m.ncol();
+    // row sums
+    NumericVector rs(nr);
+ 
+    // i: col index of m, j: row index of m
+    for(int j = 0; j < nr; j++){ 
+      for(int i = 0; i < nc; i++){
+        rs[j] += m[i*nr + j]; 
+      }   
+    }
+ 
+    return rs;
+ 
+  }
+")
+ 
+m <- 200
+n <- 500
+set.seed(1)
+mat <- matrix(rnorm(m*n), nrow = m)
+ 
+bench::mark(
+  colSums(mat),
+  colSums_cpp(mat)
+)
+ 
+bench::mark(
+  rowSums(mat),
+  rowSums_fast_cpp(mat),
+  rowSums_slow_cpp(mat)
+)
+```
